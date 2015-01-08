@@ -1,0 +1,199 @@
+
+status = project.hasProperty('preferredStatus')?project.preferredStatus:(version.contains('SNAPSHOT')?'snapshot':'release')
+
+allprojects{
+    group = projectGroup
+    version = projectVersion
+    repositories {
+        mavenCentral()
+        flatDir {
+            name "localRepo"
+            dirs "$rootProject.projectDir/localRepo"
+        }
+    }
+}
+
+allprojects {project ->
+    group = "com.etu"
+    apply plugin: 'eclipse'
+    apply plugin: 'idea'
+
+    configurations {
+        provided {
+            description = 'Libraries which JDK or environment will provide.'
+        }
+        included {
+            description = 'Jar will be included in lib directory in archives.'
+        }
+    }
+    task buildPackage
+    afterEvaluate{
+        if (project.plugins.hasPlugin('java')){
+            sourceCompatibility = javaVersion
+            targetCompatibility = javaVersion
+            status = rootProject.status
+
+            task includedJar(type: Jar, dependsOn:classes) {
+                from sourceSets.main.output
+            }
+
+            task sourcesJar(type: Jar, dependsOn:classes) {
+                from sourceSets.main.allSource
+                classifier 'sources'
+                extension 'jar'
+            }
+
+            task javadocJar(type: Jar, dependsOn:javadoc) {
+                from javadoc.destinationDir
+                classifier 'javadoc'
+                extension 'jar'
+            }
+
+            artifacts {
+                //archives sourcesJar
+                //archives javadocJar
+                included includedJar
+            }
+
+            sourceSets {
+                main{
+                    compileClasspath += configurations.provided
+                    compileClasspath += configurations.included
+                    runtimeClasspath -= configurations.provided
+
+                    resources {
+                        srcDirs "etc"
+                        include "config.properties"
+                        include "log4j.xml"
+                    }
+               }
+                test{
+                    compileClasspath += configurations.provided
+                    compileClasspath += configurations.included
+                    runtimeClasspath += configurations.provided
+                    runtimeClasspath += configurations.included
+                }
+            }
+
+            jar {
+                into('lib') {
+                    from configurations.included
+                    exclude '*sources.jar'
+                    exclude '*javadoc.jar'
+                }
+                manifest {
+                    attributes(
+                        'Manifest-Version': '1.0',
+                    )
+                }
+            }
+
+            jar.doFirst {
+                manifest {
+                    attributes("Class-Path": configurations.included.collect { 'lib/' + it.getName() }.findAll {(it.contains('sources.jar')||it.contains('javadoc.jar'))?[]:it}.join(' '))
+                }
+            }
+
+            task copyLibs(type: Copy, dependsOn: 'assemble'){
+                from project.jar
+                into 'build/package'
+            }
+
+            task copyDeps(type: Copy, dependsOn: 'assemble'){
+                from project.configurations.runtime - project.configurations.included
+                into 'build/package/lib'
+            }
+
+            task copyResources(type: Copy, dependsOn: 'assemble'){
+                destinationDir = project.projectDir
+                toCopyDirList.each {
+                    file(project.projectDir).eachDirMatch(it) { dir->
+                        into( "build/package/$it" ) {
+                            from dir
+                        }
+                    }
+                }
+            }
+
+            buildPackage.dependsOn copyLibs, copyDeps, copyResources
+
+            eclipse {
+                classpath {
+                    plusConfigurations += [ configurations.provided ]
+                    plusConfigurations += [ configurations.included ]
+                    noExportConfigurations += [ configurations.provided ]
+                    defaultOutputDir = file('classes')
+                }
+            }
+
+            idea {
+                module {
+                    outputDir = file('classes')
+                    testOutputDir = file('classes')
+                    scopes.COMPILE.plus += [configurations.provided]
+                    scopes.COMPILE.plus += [configurations.included]
+                }
+            }
+
+        }
+    }
+}
+
+configure(rootProject){
+    apply plugin: 'distribution'
+
+    task buildRuntime(type: Copy) {
+        into "$rootProject.buildDir/$runtimeDir"
+        allprojects { project ->
+            from "$project.projectDir/build/package"
+        }
+        from ("$rootProject.projectDir" ) {
+            include 'README.md'
+            include 'LICENSE.txt'
+        }
+    }
+
+    buildRuntime.dependsOn allprojects.buildPackage
+
+    task createJavaProject << {
+        def console = System.console()
+        if (console) {
+            name = console.readLine('\nPlean enter subproject name : ')
+        } else {
+            logger.error 'Cannot get console.'
+        }
+        def newProjectName = "$rootProject.name-$name"
+        def javaDir = file("$newProjectName/src/main/java")
+        def javaTestDir = file("$newProjectName/src/test/java")
+        def resrcDir = file("$newProjectName/src/java/resources")
+        def resrcTestDir = file("$newProjectName/src/test/resources")
+        def buildFile = file("$newProjectName/build.gradle")
+        def settingsFile = file("$rootProject.projectDir/settings.gradle")
+        javaDir.mkdirs()
+        javaTestDir.mkdirs()
+        resrcDir.mkdirs()
+        resrcTestDir.mkdirs()
+        buildFile.createNewFile()
+        buildFile << "apply plugin: 'java'"
+        settingsFile << "include '$newProjectName'"
+
+    }
+
+    distributions {
+        main {
+            contents {
+                from "$buildDir/$runtimeDir"	
+            }
+        }
+        distZip.dependsOn buildRuntime
+        distTar.dependsOn buildRuntime
+        distTar {
+            compression = Compression.GZIP
+        }
+    }
+}
+
+task wrapper(type: Wrapper) {
+    gradleVersion = projectGradleVersion
+}
+

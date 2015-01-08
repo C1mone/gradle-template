@@ -1,0 +1,9 @@
+ext {
+    projectName = rootProject.name
+	projectGroup = 'com.rds'
+    projectVersion = '1.0.1'
+    projectGradleVersion = '2.0'
+	javaVersion = '1.6'
+	runtimeDir = 'runtime'
+	toCopyDirList = [ "bin" ,"etc" ,"libexec"]
+}

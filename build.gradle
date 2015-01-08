@@ -1,0 +1,11 @@
+apply from: './libraries.gradle'
+apply from: file('gradle/check.gradle')
+apply from: file('gradle/convention.gradle')
+allprojects {
+    repositories {
+		maven {
+			name "cloudera"
+			url 'https://repository.cloudera.com/artifactory/cloudera-repos/'
+		}
+	}
+}
