@@ -1,9 +1,14 @@
 ext {
     projectName = rootProject.name
-	projectGroup = 'com.rds'
-    projectVersion = '1.0.1'
+    projectGroup = 'com.tw.rds'
+    projectVersion = '1.0.0'
     projectGradleVersion = '2.0'
-	javaVersion = '1.6'
-	runtimeDir = 'runtime'
-	toCopyDirList = [ "bin" ,"etc" ,"libexec"]
+    javaVersion = '1.6'
+    runtimeDir = 'runtime'
+    toCopyDirList = [ "bin" ,"etc" ,"libexec"]
+    hadoopMRv1Version = '2.5.0-mr1-cdh5.3.0'
+    libraries = [
+        hadoop_client: "org.apache.hadoop:hadoop-client:$hadoopMRv1Version",
+        hadoop_core: "org.apache.hadoop:hadoop-core:$hadoopMRv1Version"
+    ]
 }

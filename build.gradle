@@ -1,11 +1,27 @@
 apply from: './libraries.gradle'
 apply from: file('gradle/check.gradle')
 apply from: file('gradle/convention.gradle')
+apply plugin: 'application'
+mainClassName = "com.tw.rds.WordCount"
+
 allprojects {
+    group = projectGroup
+    version = projectVersion
     repositories {
 		maven {
 			name "cloudera"
 			url 'https://repository.cloudera.com/artifactory/cloudera-repos/'
 		}
 	}
+}
+apply plugin: 'java'
+dependencies {
+    compile "$libraries.hadoop_client"
+    compile "$libraries.hadoop_core"
+    included project(path: ':template-utils', configuration: 'archives')
+}
+jar {
+    manifest {
+        attributes 'Main-Class': "$mainClassName"
+    }
 }
