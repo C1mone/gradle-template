@@ -1,7 +1,10 @@
 apply from: './libraries.gradle'
 apply from: file('gradle/check.gradle')
 apply from: file('gradle/convention.gradle')
+
 allprojects {
+    group = projectGroup
+    version = projectVersion
     repositories {
 		maven {
 			name "cloudera"

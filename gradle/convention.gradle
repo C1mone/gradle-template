@@ -13,11 +13,9 @@ allprojects{
     }
 }
 
-allprojects {project ->
-    group = "com.etu"
+allprojects { Project ->
     apply plugin: 'eclipse'
     apply plugin: 'idea'
-
     configurations {
         provided {
             description = 'Libraries which JDK or environment will provide.'
@@ -28,13 +26,13 @@ allprojects {project ->
     }
     task buildPackage
     afterEvaluate{
-        if (project.plugins.hasPlugin('java')){
+        if (Project.plugins.hasPlugin('java')){
             sourceCompatibility = javaVersion
             targetCompatibility = javaVersion
-            status = rootProject.status
+            Project.status = rootProject.status
 
             task includedJar(type: Jar, dependsOn:classes) {
-                from sourceSets.main.output
+                from Project.sourceSets.main.output
             }
 
             task sourcesJar(type: Jar, dependsOn:classes) {
@@ -59,8 +57,8 @@ allprojects {project ->
                 main{
                     compileClasspath += configurations.provided
                     compileClasspath += configurations.included
+                    runtimeClasspath += configurations.included
                     runtimeClasspath -= configurations.provided
-
                     resources {
                         srcDirs "etc"
                         include "config.properties"
@@ -95,19 +93,19 @@ allprojects {project ->
             }
 
             task copyLibs(type: Copy, dependsOn: 'assemble'){
-                from project.jar
+                from Project.jar
                 into 'build/package'
             }
 
             task copyDeps(type: Copy, dependsOn: 'assemble'){
-                from project.configurations.runtime - project.configurations.included
+                from configurations.runtime
                 into 'build/package/lib'
             }
 
             task copyResources(type: Copy, dependsOn: 'assemble'){
-                destinationDir = project.projectDir
+                destinationDir = Project.projectDir
                 toCopyDirList.each {
-                    file(project.projectDir).eachDirMatch(it) { dir->
+                    file(Project.projectDir).eachDirMatch(it) { dir->
                         into( "build/package/$it" ) {
                             from dir
                         }
@@ -133,6 +131,10 @@ allprojects {project ->
                     scopes.COMPILE.plus += [configurations.provided]
                     scopes.COMPILE.plus += [configurations.included]
                 }
+            }
+
+            if(Project.plugins.hasPlugin('application')){
+                run.classpath += configurations.included
             }
 
         }
@@ -165,7 +167,7 @@ configure(rootProject){
         def newProjectName = "$rootProject.name-$name"
         def javaDir = file("$newProjectName/src/main/java")
         def javaTestDir = file("$newProjectName/src/test/java")
-        def resrcDir = file("$newProjectName/src/java/resources")
+        def resrcDir = file("$newProjectName/src/main/resources")
         def resrcTestDir = file("$newProjectName/src/test/resources")
         def buildFile = file("$newProjectName/build.gradle")
         def settingsFile = file("$rootProject.projectDir/settings.gradle")
@@ -175,7 +177,22 @@ configure(rootProject){
         resrcTestDir.mkdirs()
         buildFile.createNewFile()
         buildFile << "apply plugin: 'java'"
-        settingsFile << "include '$newProjectName'"
+        settingsFile << "\ninclude '$newProjectName'"
+
+    }
+
+    task createRootJavaProject << {
+        def javaDir = file("src/main/java")
+        def javaTestDir = file("src/test/java")
+        def resrcDir = file("src/main/resources")
+        def resrcTestDir = file("src/test/resources")
+        def buildFile = file("build.gradle")
+        javaDir.mkdirs()
+        javaTestDir.mkdirs()
+        resrcDir.mkdirs()
+        resrcTestDir.mkdirs()
+        buildFile.createNewFile()
+        buildFile << "apply plugin: 'java'"
 
     }
 
