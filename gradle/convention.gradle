@@ -193,24 +193,22 @@ configure(rootProject){
         resrcTestDir.mkdirs()
         buildFile.createNewFile()
         buildFile << "apply plugin: 'java'"
-
     }
 
     distributions {
         main {
             contents {
-                from "$buildDir/$runtimeDir"	
+                from "$buildDir/$runtimeDir"
             }
-        }
-        distZip.dependsOn buildRuntime
-        distTar.dependsOn buildRuntime
-        distTar {
-            compression = Compression.GZIP
-        }
+            distTar {
+                compression = Compression.GZIP
+            }
+            distZip.dependsOn buildRuntime
+            distTar.dependsOn buildRuntime
+      }
     }
 }
 
 task wrapper(type: Wrapper) {
     gradleVersion = projectGradleVersion
 }
-
